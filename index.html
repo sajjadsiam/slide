@@ -233,7 +233,6 @@ node server.js
           <li><span class="num-badge">1</span>Proxy → Listeners → Add <code>127.0.0.1:8080</code></li>
           <li><span class="num-badge">2</span>Browser → Manual proxy → <code>127.0.0.1:8080</code></li>
           <li><span class="num-badge">3</span>Target → Scope → <code>http://localhost:3000</code></li>
-          <li><span class="num-badge">4</span>Install <strong>JWT Editor</strong> extension</li>
         </ul>
       </div>
     </div>
@@ -256,14 +255,7 @@ node server.js
 <span class="key">"balance"</span>:    <span class="num">1500</span></pre>
         <div class="card-body" style="margin-top:8px;color:var(--muted)">Any proxy/CDN/log that stores the token captures raw PII.</div>
       </div>
-      <div class="card">
-        <div class="card-title">V1 — Weak Secret <span class="vpill">7.4 High</span></div>
-        <div class="card-body" style="margin-bottom:8px">Secret = <code style="color:var(--red)">secret123</code><br>Crackable in seconds:</div>
-        <pre>hashcat -a 0 -m 16500 \
-  token.txt rockyou.txt
-<span class="cmt"># → secret123</span></pre>
-        <div class="card-body" style="margin-top:8px;color:var(--muted)">Once cracked → forge any token for any user.</div>
-      </div>
+    
       <div class="card" style="border-color:rgba(248,81,73,.5)">
         <div class="card-title">V3 — alg:none Bypass <span class="vpill" style="background:rgba(248,81,73,.25)">9.8 CRITICAL</span></div>
         <div class="card-body" style="margin-bottom:8px">Unsigned token accepted by server:</div>

